@@ -318,7 +318,10 @@ class OutdoorGasMonitor:
         return {
             'gas_type': self.thresholds['name'],
             'current_state': self.current_state,
-            'thresholds': self.thresholds,
+            'thresholds': {
+                'low': self.thresholds['low_threshold'],
+                'high': self.thresholds['high_threshold']
+            },
             'recent_readings': len(self.raw_readings),
             'last_alert_time': self.last_alert_time
         }

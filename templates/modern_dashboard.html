@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Sensor Dashboard</title>
+    <meta name="description" content="Real-Time Sensor Dashboard with Enhanced Anomaly Detection - Monitor gas sensors, temperature, humidity, and more with multi-method detection algorithms">
+    <title>Real-Time Sensor Dashboard - Enhanced Anomaly Detection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -18,12 +19,40 @@
             transform: translateY(-2px);
         }
         .anomaly {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            background: linear-gradient(135deg, #e71818 0%, #f42a06 100%);
             animation: pulse 2s infinite;
+            box-shadow: 0 0 20px rgba(231, 24, 24, 0.5);
+        }
+        .anomaly.danger-evacuate {
+            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+            animation: danger-pulse 1s infinite;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+        }
+        .anomaly.early-warning {
+            background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
+            animation: warning-pulse 1.5s infinite;
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.5);
+        }
+        .anomaly.critical {
+            background: linear-gradient(135deg, #ff4500 0%, #ff6347 100%);
+            animation: critical-pulse 1.2s infinite;
+            box-shadow: 0 0 25px rgba(255, 69, 0, 0.6);
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.8; }
+        }
+        @keyframes danger-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.02); }
+        }
+        @keyframes warning-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+        @keyframes critical-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.01); }
         }
         .status-indicator {
             width: 12px;
@@ -45,16 +74,17 @@
                     <div class="flex items-center">
                         <h1 class="text-2xl font-bold text-gray-900">Real-Time Sensor Dashboard</h1>
                         <div class="ml-4 flex items-center">
-                            <span class="status-indicator status-connected" id="connectionStatus"></span>
+                            <span class="status-indicator status-connected" id="connectionStatus" aria-label="Connection status"></span>
                             <span class="text-sm text-gray-600" id="connectionText">Connected</span>
+                            <span class="ml-2 text-xs text-blue-600 hidden" id="loadingIndicator">🔄 Loading...</span>
                         </div>
                     </div>
-                                         <div class="text-sm text-gray-500">
-                         Last updated: <span id="lastUpdated">-</span>
-                         <div class="mt-1 text-xs text-gray-400">
-                             Enhanced Detection: Absolute + Statistical + Trend + Velocity
-                         </div>
-                     </div>
+                    <div class="text-sm text-gray-500">
+                        Last updated: <span id="lastUpdated">-</span>
+                        <div class="mt-1 text-xs text-gray-400">
+                            Enhanced Detection: Absolute + Statistical + Trend + Velocity (10+ Readings)
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -62,7 +92,7 @@
         <!-- Main Content -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Sensor Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="sensorGrid">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="sensorGrid" role="grid" aria-label="Sensor readings">
                 <!-- Sensor cards will be populated here -->
             </div>
 
@@ -71,13 +101,13 @@
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold mb-4">Gas Sensor Trends (Last 20 Readings)</h3>
                     <div style="height: 300px; position: relative;">
-                        <canvas id="trendChart"></canvas>
+                        <canvas id="trendChart" aria-label="Gas sensor trend chart"></canvas>
                     </div>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold mb-4">Anomaly Detection Distribution</h3>
                     <div style="height: 300px; position: relative;">
-                        <canvas id="anomalyChart"></canvas>
+                        <canvas id="anomalyChart" aria-label="Anomaly detection distribution chart"></canvas>
                     </div>
                 </div>
             </div>
@@ -85,16 +115,16 @@
             <!-- Recent Data Table -->
             <div class="mt-8 bg-white rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold">Recent Sensor Data</h3>
+                    <h3 class="text-lg font-semibold">Recent Sensor Data (Last 10+ Readings)</h3>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200" role="table" aria-label="Recent sensor data">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sensor</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Sensor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Value</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Timestamp</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200" id="dataTable">
@@ -110,6 +140,13 @@
         // Global variables
         let trendChart, anomalyChart;
         let lastData = [];
+
+        // Sanitize HTML to prevent XSS
+        function sanitizeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
 
         // Initialize charts
         function initializeCharts() {
@@ -226,25 +263,58 @@
 
         // Create sensor card
         function createSensorCard(sensor) {
-            const cardClass = (sensor.isAnomaly || sensor.anomaly) ? 'sensor-card anomaly' : 'sensor-card';
+            // Check for anomaly using multiple indicators from API response
+            const isAnomaly = Boolean(sensor.anomaly) || 
+                             sensor.anomaly_type || 
+                             sensor.alert_message || 
+                             sensor.home_safety_alert;
+            
+            // Determine card class based on anomaly type and severity
+            let cardClass = 'sensor-card';
+            let statusText = '✅ Normal';
+            let statusColor = 'text-green-500';
+            
+            if (isAnomaly) {
+                if (sensor.anomaly_type === 'DANGER_EVACUATE' || sensor.home_safety_alert) {
+                    cardClass += ' anomaly danger-evacuate';
+                    statusText = '🚨 DANGER - EVACUATE';
+                    statusColor = 'text-red-500';
+                } else if (sensor.anomaly_type === 'EARLY_WARNING') {
+                    cardClass += ' anomaly early-warning';
+                    statusText = '⚠️ Early Warning';
+                    statusColor = 'text-yellow-500';
+                } else if (sensor.anomaly_type === 'CRITICAL' || sensor.anomaly_type === 'EXTREME') {
+                    cardClass += ' anomaly critical';
+                    statusText = '🚨 Critical Alert';
+                    statusColor = 'text-red-500';
+                } else {
+                    cardClass += ' anomaly';
+                    statusText = '🚨 Anomaly Detected';
+                    statusColor = 'text-orange-500';
+                }
+            }
+            
+            const timestamp = new Date(sensor.timestamp).toLocaleTimeString();
+            
             return `
-                <div class="${cardClass}">
+                <div class="${cardClass}" role="gridcell" aria-label="${sensor.type} sensor reading">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="text-2xl">${sensor.icon}</div>
+                        <div class="text-2xl" aria-hidden="true">${sensor.icon}</div>
                         <div class="text-right">
-                            <div class="text-sm opacity-75">${sensor.type}</div>
+                            <div class="text-sm opacity-75">${sanitizeHTML(sensor.type)}</div>
                             <div class="text-2xl font-bold">${sensor.value.toFixed(1)}</div>
-                            <div class="text-sm opacity-75">${sensor.unit}</div>
+                            <div class="text-sm opacity-75">${sanitizeHTML(sensor.unit)}</div>
                         </div>
                     </div>
-                                         <div class="flex items-center justify-between">
-                         <div class="text-sm opacity-75">
-                             ${(sensor.isAnomaly || sensor.anomaly) ? '🚨 Anomaly Detected' : '✅ Normal'}
-                         </div>
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm opacity-75 ${statusColor} font-semibold">
+                            ${sanitizeHTML(statusText)}
+                        </div>
                         <div class="text-xs opacity-75">
-                            ${new Date(sensor.timestamp).toLocaleTimeString()}
+                            ${sanitizeHTML(timestamp)}
                         </div>
                     </div>
+                    ${sensor.alert_message ? `<div class="mt-2 text-xs opacity-90 text-red-400 font-medium">${sanitizeHTML(sensor.alert_message)}</div>` : ''}
                 </div>
             `;
         }
@@ -252,85 +322,156 @@
         // Update sensor grid
         function updateSensorGrid(sensors) {
             const grid = document.getElementById('sensorGrid');
-            grid.innerHTML = sensors.map(createSensorCard).join('');
+            if (!grid) return;
+            
+            try {
+                grid.innerHTML = sensors.map(createSensorCard).join('');
+            } catch (error) {
+                console.error('Error updating sensor grid:', error);
+                grid.innerHTML = '<div class="col-span-full text-center text-gray-500">Error loading sensor data</div>';
+            }
         }
 
         // Update data table
         function updateDataTable(data) {
             const tbody = document.getElementById('dataTable');
-            tbody.innerHTML = data.map(row => `
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <span class="text-lg mr-2">${row.icon}</span>
-                            <div>
-                                <div class="text-sm font-medium text-gray-900">${row.type}</div>
-                                <div class="text-sm text-gray-500">${row.sensor_id}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${row.value.toFixed(2)} ${row.unit}</div>
-                    </td>
-                                         <td class="px-6 py-4 whitespace-nowrap">
-                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                             (row.isAnomaly || row.anomaly) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                         }">
-                             ${(row.isAnomaly || row.anomaly) ? 'Anomaly' : 'Normal'}
-                         </span>
-                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${new Date(row.timestamp).toLocaleString()}
-                    </td>
-                </tr>
-            `).join('');
+            if (!tbody) return;
+            
+            try {
+                console.log(`Modern Dashboard: Updating data table with ${data.length} readings`);
+                
+                // Ensure we show at least 10 readings if available
+                const readingsToShow = Math.max(10, data.length);
+                console.log(`Modern Dashboard: Will display ${readingsToShow} readings in table`);
+                
+                tbody.innerHTML = data.map(row => {
+                    // Check for anomaly using multiple indicators
+                    const isAnomaly = Boolean(row.anomaly) || 
+                                     row.anomaly_type || 
+                                     row.alert_message || 
+                                     row.home_safety_alert;
+                    
+                    // Determine status class and text based on anomaly type
+                    let statusClass = 'bg-green-100 text-green-800';
+                    let statusText = 'Normal';
+                    
+                    if (isAnomaly) {
+                        if (row.anomaly_type === 'DANGER_EVACUATE' || row.home_safety_alert) {
+                            statusClass = 'bg-red-100 text-red-800';
+                            statusText = 'DANGER - EVACUATE';
+                        } else if (row.anomaly_type === 'EARLY_WARNING') {
+                            statusClass = 'bg-yellow-100 text-yellow-800';
+                            statusText = 'Early Warning';
+                        } else if (row.anomaly_type === 'CRITICAL' || row.anomaly_type === 'EXTREME') {
+                            statusClass = 'bg-red-100 text-red-800';
+                            statusText = 'Critical Alert';
+                        } else {
+                            statusClass = 'bg-orange-100 text-orange-800';
+                            statusText = 'Anomaly';
+                        }
+                    }
+                    
+                    const timestamp = new Date(row.timestamp).toLocaleString();
+                    
+                    return `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <span class="text-lg mr-2" aria-hidden="true">${row.icon}</span>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">${sanitizeHTML(row.type)}</div>
+                                        <div class="text-sm text-gray-500">${sanitizeHTML(row.sensor_id)}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${row.value.toFixed(2)} ${sanitizeHTML(row.unit)}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                                    ${sanitizeHTML(statusText)}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${sanitizeHTML(timestamp)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error updating data table:', error);
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Error loading data</td></tr>';
+            }
         }
 
         // Update charts
         function updateCharts(data) {
-            if (data.length === 0) return;
+            if (!data || data.length === 0) return;
             
-            // Update trend chart - limit to last 20 data points for better visualization
-            const recentData = data.slice(-20);
-            const timestamps = recentData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-            const values = recentData.map(d => d.value);
+            try {
+                // Update trend chart - limit to last 20 data points for better visualization
+                const recentData = data.slice(-20);
+                const timestamps = recentData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                const values = recentData.map(d => d.value);
 
-            trendChart.data.labels = timestamps;
-            trendChart.data.datasets[0].data = values;
-            
-            // Set better y-axis scaling
-            const minValue = Math.min(...values);
-            const maxValue = Math.max(...values);
-            const range = maxValue - minValue;
-            
-            trendChart.options.scales.y.min = Math.max(0, minValue - range * 0.1);
-            trendChart.options.scales.y.max = maxValue + range * 0.1;
-            
-            trendChart.update();
+                trendChart.data.labels = timestamps;
+                trendChart.data.datasets[0].data = values;
+                
+                // Set better y-axis scaling
+                const minValue = Math.min(...values);
+                const maxValue = Math.max(...values);
+                const range = maxValue - minValue;
+                
+                trendChart.options.scales.y.min = Math.max(0, minValue - range * 0.1);
+                trendChart.options.scales.y.max = maxValue + range * 0.1;
+                
+                trendChart.update();
 
-            // Update anomaly chart
-            const normalCount = data.filter(d => !(d.isAnomaly || d.anomaly)).length;
-            const anomalyCount = data.filter(d => (d.isAnomaly || d.anomaly)).length;
+                // Update anomaly chart
+                const normalCount = data.filter(d => !(d.isAnomaly || d.anomaly)).length;
+                const anomalyCount = data.filter(d => (d.isAnomaly || d.anomaly)).length;
 
-            anomalyChart.data.datasets[0].data = [normalCount, anomalyCount];
-            anomalyChart.update();
+                anomalyChart.data.datasets[0].data = [normalCount, anomalyCount];
+                anomalyChart.update();
+            } catch (error) {
+                console.error('Error updating charts:', error);
+            }
         }
 
         // Fetch and update data
         async function fetchAndUpdateData() {
             try {
-                const response = await fetch('/dashboard-data');
-                const data = await response.json();
+                // Show loading state
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+                
+                // Fetch current sensor status with enhanced anomaly detection
+                const response = await fetch('/api/sensors/enhanced');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const currentData = await response.json();
 
-                if (data.length > 0) {
-                    // Process data for display
-                    const processedData = data.map(row => ({
+                // Fetch historical data for charts
+                const historyResponse = await fetch('/api/sensors/history');
+                if (!historyResponse.ok) {
+                    throw new Error(`HTTP error! status: ${historyResponse.status}`);
+                }
+                const historicalData = await historyResponse.json();
+
+                if (currentData && currentData.length > 0) {
+                    console.log(`Modern Dashboard: Received ${currentData.length} readings from enhanced API`);
+                    
+                    // Process current data for display (no need to modify, API already provides all fields)
+                    const processedData = currentData.map(row => ({
                         ...row,
-                        isAnomaly: Boolean(row.anomaly), // Convert to boolean
+                        // Add display properties
                         icon: getIconForSensor(row.sensor_type),
                         unit: getUnitForSensor(row.sensor_type),
                         type: getDisplayName(row.sensor_type)
                     }));
+
+                    console.log(`Modern Dashboard: Processed ${processedData.length} readings for display`);
 
                     // Group by sensor type for cards
                     const sensorGroups = {};
@@ -342,23 +483,43 @@
                     });
 
                     const sensorCards = Object.values(sensorGroups).map(group => group[group.length - 1]);
+                    console.log(`Modern Dashboard: Created ${sensorCards.length} sensor cards`);
 
                     updateSensorGrid(sensorCards);
-                    updateDataTable(processedData.slice(-10)); // Last 10 readings
-                    updateCharts(processedData);
+                    // Show all processed data in table (should now include multiple readings per sensor)
+                    updateDataTable(processedData);
+                    
+                    // Use historical data for charts
+                    if (historicalData && historicalData.length > 0) {
+                        console.log(`Modern Dashboard: Using ${historicalData.length} historical readings for charts`);
+                        updateCharts(historicalData);
+                    }
 
                     lastData = processedData;
+                } else {
+                    console.log('Modern Dashboard: No current data received from API');
                 }
 
                 // Update connection status
-                document.getElementById('connectionStatus').className = 'status-indicator status-connected';
-                document.getElementById('connectionText').textContent = 'Connected';
-                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+                const statusElement = document.getElementById('connectionStatus');
+                const textElement = document.getElementById('connectionText');
+                const updatedElement = document.getElementById('lastUpdated');
+                
+                if (statusElement) statusElement.className = 'status-indicator status-connected';
+                if (textElement) textElement.textContent = 'Connected';
+                if (updatedElement) updatedElement.textContent = new Date().toLocaleTimeString();
 
             } catch (error) {
                 console.error('Error fetching data:', error);
-                document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
-                document.getElementById('connectionText').textContent = 'Disconnected';
+                const statusElement = document.getElementById('connectionStatus');
+                const textElement = document.getElementById('connectionText');
+                
+                if (statusElement) statusElement.className = 'status-indicator status-disconnected';
+                if (textElement) textElement.textContent = 'Disconnected';
+            } finally {
+                // Hide loading state
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) loadingIndicator.classList.add('hidden');
             }
         }
 
@@ -401,11 +562,21 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
-            fetchAndUpdateData();
-            
-            // Update every 10 seconds
-            setInterval(fetchAndUpdateData, 10000);
+            try {
+                initializeCharts();
+                fetchAndUpdateData();
+                
+                // Store interval ID for cleanup
+                const updateInterval = setInterval(fetchAndUpdateData, 10000);
+                
+                // Cleanup on page unload
+                window.addEventListener('beforeunload', function() {
+                    clearInterval(updateInterval);
+                });
+                
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
         });
     </script>
 </body>

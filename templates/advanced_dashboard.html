@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Advanced Gas Monitoring Dashboard - Dual System Home Safety + Outdoor Monitoring with Configurable Thresholds and Real-Time Detection">
+    <title>Advanced Gas Monitoring Dashboard - Dual System Monitoring</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .home-safety-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+        }
+        .outdoor-monitor-card {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+        }
+        .anomaly {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            animation: pulse 2s infinite;
+        }
+        .early-warning {
+            background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+            animation: pulse 2s infinite;
+        }
+        .danger {
+            background: linear-gradient(135deg, #ff3838 0%, #ff6348 100%);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-connected { background-color: #10b981; }
+        .status-disconnected { background-color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Advanced Gas Monitoring Dashboard</h1>
+                        <div class="ml-4 flex items-center">
+                            <span class="status-indicator status-connected" id="connectionStatus" aria-label="Connection status"></span>
+                            <span class="text-sm text-gray-600" id="connectionText">Connected</span>
+                            <span class="ml-2 text-xs text-blue-600 hidden" id="loadingIndicator">🔄 Loading...</span>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Last updated: <span id="lastUpdated">-</span>
+                        <div class="mt-1 text-xs text-gray-400">
+                            Dual System: Home Safety + Outdoor Monitoring
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- System Overview -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Home Safety System -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-purple-600">🏠 Home Safety System</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Current Status:</span>
+                            <span id="homeStatus" class="font-semibold">Loading...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Thresholds:</span>
+                            <span class="text-sm">2000/4000 ppm</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Detection Method:</span>
+                            <span class="text-sm">Enhanced Multi-Method</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Response Time:</span>
+                            <span class="text-sm">Immediate</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outdoor Monitor System -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-green-600">🌍 Outdoor Monitor System</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Current Status:</span>
+                            <span id="outdoorStatus" class="font-semibold">Loading...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Gas Type:</span>
+                            <span id="gasType" class="text-sm">Methane</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Thresholds:</span>
+                            <span id="outdoorThresholds" class="text-sm">2500/7500 ppm (Default)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Detection Method:</span>
+                            <span class="text-sm">Signal Processing + Voting</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Threshold Visualization -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Home Safety Thresholds -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-purple-600">🏠 Home Safety Thresholds</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Safe Zone:</span>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                                <span class="text-sm font-medium">0 - 1,999 ppm</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Early Warning:</span>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
+                                <span class="text-sm font-medium">2,000 - 3,999 ppm</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Danger - Evacuate:</span>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-red-500 rounded mr-2"></div>
+                                <span class="text-sm font-medium">4,000+ ppm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outdoor Monitor Thresholds -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-green-600">🌍 Outdoor Monitor Thresholds</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Safe Zone:</span>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                                <span class="text-sm font-medium">0 - <span id="outdoorLowThreshold">2,499</span> ppm</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Early Warning:</span>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
+                                <span class="text-sm font-medium"><span id="outdoorLowThreshold2">2,500</span> - <span id="outdoorHighThreshold">7,499</span> ppm</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Danger Level:</span>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-red-500 rounded mr-2"></div>
+                                <span class="text-sm font-medium"><span id="outdoorHighThreshold2">7,500</span>+ ppm</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                            <strong>Default:</strong> Methane thresholds (2500/7500 ppm)
+                            <div id="thresholdNote" class="mt-1 text-blue-600"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sensor Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="sensorGrid" role="grid" aria-label="Sensor monitoring cards">
+                <!-- Cards will be populated here -->
+            </div>
+
+            <!-- Advanced Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Real-Time Gas Levels</h3>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="realTimeChart" aria-label="Real-time gas levels chart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Detection Methods Comparison</h3>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="detectionChart" aria-label="Detection methods comparison chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Data Table -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold">Detailed Monitoring Data (Last 10+ Readings)</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200" role="table" aria-label="Detailed monitoring data">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">System</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Value</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="detailedTable">
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let realTimeChart, detectionChart;
+        let lastHomeData = null;
+        let lastOutdoorData = null;
+
+        // Initialize charts
+        function initializeCharts() {
+            const realTimeCtx = document.getElementById('realTimeChart').getContext('2d');
+            realTimeChart = new Chart(realTimeCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Home Safety (Enhanced)',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Outdoor Monitor',
+                        data: [],
+                        borderColor: '#11998e',
+                        backgroundColor: 'rgba(17, 153, 142, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Gas Level (ppm)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+
+            const detectionCtx = document.getElementById('detectionChart').getContext('2d');
+            detectionChart = new Chart(detectionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Home Safety', 'Outdoor Monitor', 'Both Systems', 'No Detection'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: [
+                            '#667eea',
+                            '#11998e',
+                            '#ff6b6b',
+                            '#e5e7eb'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create sensor card with system differentiation
+        function createSensorCard(sensor, systemType) {
+            let cardClass = systemType === 'home' ? 'home-safety-card' : 'outdoor-monitor-card';
+            let statusText = 'Normal';
+            let statusClass = '';
+            let thresholdInfo = '';
+            let alertMessage = '';
+
+            // Get current value
+            const currentValue = sensor.value || sensor.raw_value || 0;
+
+            if (systemType === 'home') {
+                // Home Safety thresholds: 2000/4000 ppm
+                if (currentValue >= 4000) {
+                    cardClass += ' danger';
+                    statusText = 'DANGER - EVACUATE';
+                    statusClass = 'text-red-400 font-bold';
+                    thresholdInfo = `Above 4000 ppm (Danger)`;
+                } else if (currentValue >= 2000) {
+                    cardClass += ' early-warning';
+                    statusText = 'Early Warning';
+                    statusClass = 'text-yellow-400 font-bold';
+                    thresholdInfo = `2000-4000 ppm (Warning)`;
+                } else {
+                    thresholdInfo = `Below 2000 ppm (Safe)`;
+                }
+            } else {
+                // Outdoor Monitor thresholds (configurable)
+                const lowThreshold = sensor.thresholds ? sensor.thresholds.low_threshold : 2500;
+                const highThreshold = sensor.thresholds ? sensor.thresholds.high_threshold : 7500;
+                
+                if (currentValue >= highThreshold) {
+                    cardClass += ' danger';
+                    statusText = 'DANGER';
+                    statusClass = 'text-red-400 font-bold';
+                    thresholdInfo = `Above ${highThreshold} ppm (Danger)`;
+                } else if (currentValue >= lowThreshold) {
+                    cardClass += ' early-warning';
+                    statusText = 'Early Warning';
+                    statusClass = 'text-yellow-400 font-bold';
+                    thresholdInfo = `${lowThreshold}-${highThreshold} ppm (Warning)`;
+                } else {
+                    thresholdInfo = `Below ${lowThreshold} ppm (Safe)`;
+                }
+            }
+
+            // Add alert message if available
+            if (sensor.alert_message) {
+                alertMessage = sensor.alert_message;
+            } else if (sensor.message) {
+                alertMessage = sensor.message;
+            }
+
+            return `
+                <div class="${cardClass}">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-2xl">${systemType === 'home' ? '🏠' : '🌍'}</div>
+                        <div class="text-right">
+                            <div class="text-sm opacity-75">${systemType === 'home' ? 'Home Safety' : 'Outdoor Monitor'}</div>
+                            <div class="text-2xl font-bold">${currentValue.toFixed(1)}</div>
+                            <div class="text-sm opacity-75">ppm</div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm opacity-75 ${statusClass}">
+                                ${statusText}
+                            </div>
+                            <div class="text-xs opacity-75">
+                                ${new Date(sensor.timestamp).toLocaleTimeString()}
+                            </div>
+                        </div>
+                        <div class="text-xs opacity-75 bg-black bg-opacity-20 rounded px-2 py-1">
+                            ${thresholdInfo}
+                        </div>
+                        ${alertMessage ? `<div class="text-xs opacity-90 text-red-300 font-medium bg-red-900 bg-opacity-30 rounded px-2 py-1">${alertMessage}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update sensor grid
+        function updateSensorGrid(homeData, outdoorData) {
+            const grid = document.getElementById('sensorGrid');
+            let cards = [];
+
+            if (homeData) {
+                cards.push(createSensorCard(homeData, 'home'));
+            }
+            if (outdoorData) {
+                cards.push(createSensorCard(outdoorData, 'outdoor'));
+            }
+
+            grid.innerHTML = cards.join('');
+        }
+
+        // Update detailed table with historical data
+        function updateDetailedTable(homeData, outdoorData) {
+            const tbody = document.getElementById('detailedTable');
+            let rows = [];
+
+            // Add home safety data
+            if (homeData) {
+                rows.push(`
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <span class="text-lg mr-2">🏠</span>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Home Safety System</div>
+                                    <div class="text-sm text-gray-500">Enhanced Detection</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${homeData.value ? homeData.value.toFixed(2) : homeData.raw_value ? homeData.raw_value.toFixed(2) : '0.00'} ppm</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                homeData.alert_triggered ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                            }">
+                                ${homeData.state || 'Normal'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${homeData.alert_message || 'No alerts'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${new Date(homeData.timestamp).toLocaleString()}
+                        </td>
+                    </tr>
+                `);
+            }
+
+            // Add outdoor monitor data
+            if (outdoorData) {
+                rows.push(`
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <span class="text-lg mr-2">🌍</span>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Outdoor Monitor</div>
+                                    <div class="text-sm text-gray-500">${outdoorData.gas_type}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-2">${outdoorData.raw_value ? outdoorData.raw_value.toFixed(2) : '0.00'} ppm</div>
+                            <div class="text-xs text-gray-500">Avg: ${outdoorData.moving_average ? outdoorData.moving_average.toFixed(1) : '0.0'} ppm</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                outdoorData.alert_triggered ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                            }">
+                                ${outdoorData.state || 'Normal'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${outdoorData.alert_message || 'No alerts'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${new Date(outdoorData.timestamp).toLocaleString()}
+                        </td>
+                    </tr>
+                `);
+            }
+
+            // Add recent historical data (last 10 readings to ensure minimum display)
+            if (window.lastHistoricalData && window.lastHistoricalData.length > 0) {
+                // Show at least 10 readings, but if we have more data, show more
+                const minReadings = 10;
+                const availableReadings = window.lastHistoricalData.length;
+                const readingsToShow = Math.max(minReadings, Math.min(availableReadings, 20)); // Show 10-20 readings
+                const recentData = window.lastHistoricalData.slice(-readingsToShow);
+                
+                console.log(`Displaying ${readingsToShow} readings out of ${availableReadings} available`);
+                
+                recentData.forEach(entry => {
+                    const isAnomaly = entry.anomaly === 1;
+                    rows.push(`
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <span class="text-lg mr-2">📊</span>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Historical Data</div>
+                                        <div class="text-sm text-gray-500">${entry.sensor_type}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${entry.value.toFixed(2)} ppm</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    isAnomaly ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                }">
+                                    ${isAnomaly ? 'Anomaly' : 'Normal'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${isAnomaly ? 'Statistical anomaly detected' : 'Within normal range'}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${new Date(entry.timestamp).toLocaleString()}
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+
+            tbody.innerHTML = rows.join('');
+        }
+
+        // Update charts with data
+        function updateCharts(homeData, outdoorData) {
+            if (!realTimeChart || !detectionChart) return;
+            
+            try {
+                // Update real-time chart
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Add new data points
+                if (homeData) {
+                    const homeValue = homeData.value || homeData.raw_value || 0;
+                    realTimeChart.data.labels.push(now);
+                    realTimeChart.data.datasets[0].data.push(homeValue);
+                }
+                
+                if (outdoorData) {
+                    const outdoorValue = outdoorData.raw_value || outdoorData.moving_average || 0;
+                    if (realTimeChart.data.datasets[1].data.length < realTimeChart.data.datasets[0].data.length) {
+                        realTimeChart.data.datasets[1].data.push(outdoorValue);
+                    } else {
+                        realTimeChart.data.datasets[1].data[realTimeChart.data.datasets[1].data.length - 1] = outdoorValue;
+                    }
+                }
+                
+                // Keep only last 20 data points
+                if (realTimeChart.data.labels.length > 20) {
+                    realTimeChart.data.labels.shift();
+                    realTimeChart.data.datasets[0].data.shift();
+                    realTimeChart.data.datasets[1].data.shift();
+                }
+                
+                realTimeChart.update();
+                
+                // Update detection chart
+                let homeCount = 0, outdoorCount = 0, bothCount = 0, noneCount = 0;
+                
+                if (homeData && homeData.alert_triggered) homeCount++;
+                if (outdoorData && outdoorData.alert_triggered) outdoorCount++;
+                if (homeData && outdoorData && homeData.alert_triggered && outdoorData.alert_triggered) bothCount++;
+                if ((!homeData || !homeData.alert_triggered) && (!outdoorData || !outdoorData.alert_triggered)) noneCount++;
+                
+                detectionChart.data.datasets[0].data = [homeCount, outdoorCount, bothCount, noneCount];
+                detectionChart.update();
+            } catch (error) {
+                console.error('Error updating charts:', error);
+            }
+        }
+
+        // Update charts with historical data
+        function updateChartsWithHistory(historicalData) {
+            if (!realTimeChart || !detectionChart) return;
+            
+            // Filter data for MQ-5 sensor (gas sensor)
+            const gasData = historicalData.filter(d => d.sensor_type === 'mq5_01');
+            
+            if (gasData.length > 0) {
+                // Update real-time chart with historical data
+                const timestamps = gasData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                const values = gasData.map(d => d.value);
+                
+                realTimeChart.data.labels = timestamps;
+                realTimeChart.data.datasets[0].data = values;
+                
+                // Keep only last 20 data points
+                if (realTimeChart.data.labels.length > 20) {
+                    realTimeChart.data.labels = realTimeChart.data.labels.slice(-20);
+                    realTimeChart.data.datasets[0].data = realTimeChart.data.datasets[0].data.slice(-20);
+                }
+                
+                realTimeChart.update();
+                
+                // Update detection chart based on anomalies in historical data
+                const anomalyCount = gasData.filter(d => d.anomaly === 1).length;
+                const normalCount = gasData.filter(d => d.anomaly === 0).length;
+                
+                detectionChart.data.datasets[0].data = [anomalyCount, normalCount, 0, 0];
+                detectionChart.update();
+            }
+        }
+
+        // Update threshold visualization
+        function updateThresholdVisualization(thresholds) {
+            // Default thresholds for methane (from config)
+            const defaultThresholds = {
+                low_threshold: 2500,
+                high_threshold: 7500
+            };
+            
+            if (!thresholds) {
+                console.log('Outdoor monitor thresholds not available, using defaults');
+                // Use default thresholds
+                document.getElementById('outdoorLowThreshold').textContent = defaultThresholds.low_threshold - 1;
+                document.getElementById('outdoorLowThreshold2').textContent = defaultThresholds.low_threshold;
+                document.getElementById('outdoorHighThreshold').textContent = defaultThresholds.high_threshold - 1;
+                document.getElementById('outdoorHighThreshold2').textContent = defaultThresholds.high_threshold;
+                document.getElementById('thresholdNote').textContent = 'Using default methane thresholds (2500/7500 ppm) as outdoor monitor is not connected or no data available.';
+                return;
+            }
+
+            // Update with actual thresholds
+            const lowThreshold = thresholds.low_threshold || defaultThresholds.low_threshold;
+            const highThreshold = thresholds.high_threshold || defaultThresholds.high_threshold;
+            
+            document.getElementById('outdoorLowThreshold').textContent = lowThreshold - 1;
+            document.getElementById('outdoorLowThreshold2').textContent = lowThreshold;
+            document.getElementById('outdoorHighThreshold').textContent = highThreshold - 1;
+            document.getElementById('outdoorHighThreshold2').textContent = highThreshold;
+            
+            console.log(`Updated outdoor thresholds: ${lowThreshold}/${highThreshold} ppm`);
+            document.getElementById('thresholdNote').textContent = `Outdoor monitor thresholds: ${lowThreshold}/${highThreshold} ppm`;
+        }
+
+        // Fetch data from both systems
+        async function fetchData() {
+            try {
+                // Show loading state
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+                
+                // Fetch home safety data with enhanced anomaly detection
+                const homeResponse = await fetch('/api/sensors/enhanced');
+                const homeData = await homeResponse.json();
+                
+                // Fetch historical data for charts
+                const historyResponse = await fetch('/api/sensors/history');
+                const historicalData = await historyResponse.json();
+                
+                // Fetch outdoor monitor status
+                let outdoorStatus = { current_state: 'Not Available', gas_type: 'Methane', thresholds: null };
+                try {
+                    const outdoorStatusResponse = await fetch('/outdoor-gas-status');
+                    if (outdoorStatusResponse.ok) {
+                        outdoorStatus = await outdoorStatusResponse.json();
+                    } else {
+                        console.log('Outdoor monitor endpoint not available, using defaults');
+                    }
+                } catch (error) {
+                    console.log('Outdoor monitor not available, using default thresholds');
+                }
+
+                // Update system status
+                document.getElementById('homeStatus').textContent = homeData.length > 0 ? 'Active' : 'No Data';
+                document.getElementById('outdoorStatus').textContent = outdoorStatus.current_state || 'Not Available';
+                document.getElementById('gasType').textContent = outdoorStatus.gas_type || 'Methane (Default)';
+                
+                // Update thresholds display
+                if (outdoorStatus.thresholds) {
+                    document.getElementById('outdoorThresholds').textContent = 
+                        `${outdoorStatus.thresholds.low_threshold}/${outdoorStatus.thresholds.high_threshold} ppm`;
+                } else {
+                    document.getElementById('outdoorThresholds').textContent = '2500/7500 ppm (Default)';
+                }
+
+                // Update threshold visualization
+                updateThresholdVisualization(outdoorStatus.thresholds);
+
+                // Update sensor grid
+                if (homeData.length > 0) {
+                    const gasSensor = homeData.find(s => s.type === 'Gas' || s.sensor_type === 'mq5_01');
+                    if (gasSensor) {
+                        lastHomeData = gasSensor;
+                    }
+                }
+
+                // Update displays
+                updateSensorGrid(lastHomeData, lastOutdoorData);
+                updateDetailedTable(lastHomeData, lastOutdoorData);
+                
+                // Store historical data globally for table display
+                if (historicalData.length > 0) {
+                    window.lastHistoricalData = historicalData;
+                    updateChartsWithHistory(historicalData);
+                }
+
+                // Update timestamp
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                // Hide loading state
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // Test outdoor monitor with sample data
+        async function testOutdoorMonitor() {
+            try {
+                const testData = {
+                    value: 3000,
+                    gas_type: 'methane',
+                    sensor_id: 'test_sensor'
+                };
+
+                const response = await fetch('/outdoor-gas-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                lastOutdoorData = result;
+                
+                // Update displays
+                updateSensorGrid(lastHomeData, lastOutdoorData);
+                updateDetailedTable(lastHomeData, lastOutdoorData);
+
+            } catch (error) {
+                console.error('Error testing outdoor monitor:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                initializeCharts();
+                fetchData();
+                
+                // Store interval IDs for cleanup
+                const dataInterval = setInterval(fetchData, 5000);
+                const testInterval = setInterval(testOutdoorMonitor, 10000);
+                
+                // Cleanup on page unload
+                window.addEventListener('beforeunload', function() {
+                    clearInterval(dataInterval);
+                    clearInterval(testInterval);
+                });
+                
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
+        });
+    </script>
+</body>
+</html>

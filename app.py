@@ -52,11 +52,15 @@ def home():
 
 @app.route('/dashboard')
 def dashboard():
-    return render_template("dashboard.html")
+    return render_template("index.html")
 
 @app.route('/modern')
 def modern_dashboard():
     return render_template("modern_dashboard.html")
+
+@app.route('/advanced')
+def advanced_dashboard():
+    return render_template('advanced_dashboard.html')
 
 # New route to serve the React frontend
 @app.route('/react')
@@ -91,10 +95,10 @@ def get_sensors():
         sensors = []
         for sensor_type in df['sensor_type'].unique():
             sensor_data = df[df['sensor_type'] == sensor_type].iloc[-1]
-            
             # Map sensor type to display name
             display_name = next((k for k, v in FEATURE_MAP.items() if v == sensor_type), sensor_type)
-            
+            if display_name == sensor_type and sensor_type == "mq5_01":
+                display_name = "Gas"
             sensors.append({
                 'id': f'sensor-{sensor_type}',
                 'type': display_name,
@@ -105,6 +109,94 @@ def get_sensors():
                 'trend': 'stable',  # You can implement trend calculation
                 'icon': get_icon_for_sensor(display_name)
             })
+        
+        return jsonify(sensors)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# API endpoint for enhanced sensor data with anomaly detection
+@app.route('/api/sensors/enhanced', methods=['GET'])
+def get_enhanced_sensors():
+    try:
+        if not os.path.exists(CSV_FILE):
+            return jsonify([])
+        
+        df = pd.read_csv(CSV_FILE)
+        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+        df = df.sort_values('timestamp', ascending=True).tail(50)  # Get last 50 readings for better data display
+
+        # Group by sensor type and get multiple readings with enhanced anomaly detection
+        sensors = []
+        for sensor_type in df['sensor_type'].unique():
+            sensor_data = df[df['sensor_type'] == sensor_type].tail(10)  # Get last 10 readings for each sensor type
+            
+            for _, row in sensor_data.iterrows():
+                value = float(row.get('value', 0))
+                
+                # Use enhanced anomaly detection for gas sensors
+                if sensor_type == 'mq5_01' and enhanced_detector:
+                    try:
+                        anomaly_result = enhanced_detector.comprehensive_anomaly_detection(value, sensor_type)
+                        # Map sensor type to display name
+                        display_name = next((k for k, v in FEATURE_MAP.items() if v == sensor_type), sensor_type)
+                        if display_name == sensor_type and sensor_type == "mq5_01":
+                            display_name = "Gas"
+                        
+                        sensors.append({
+                            'id': f'sensor-{sensor_type}-{row.name}',
+                            'sensor_type': sensor_type,
+                            'type': display_name,
+                            'value': value,
+                            'unit': get_unit_for_sensor(display_name),
+                            'timestamp': row['timestamp'].strftime("%Y-%m-%dT%H:%M:%S") if not pd.isnull(row['timestamp']) else '',
+                            'anomaly': 1 if anomaly_result['anomaly_detected'] else 0,
+                            'anomaly_type': anomaly_result['anomaly_type'],
+                            'alert_message': anomaly_result.get('alert_message', ''),
+                            'home_safety_alert': anomaly_result.get('home_safety_alert', False),
+                            'confidence': anomaly_result['confidence'],
+                            'trend': 'stable',
+                            'icon': get_icon_for_sensor(display_name)
+                        })
+                    except Exception as e:
+                        print(f"Enhanced detection failed for {sensor_type}: {e}")
+                        # Fall back to basic detection
+                        display_name = next((k for k, v in FEATURE_MAP.items() if v == sensor_type), sensor_type)
+                        if display_name == sensor_type and sensor_type == "mq5_01":
+                            display_name = "Gas"
+                        
+                        sensors.append({
+                            'id': f'sensor-{sensor_type}-{row.name}',
+                            'sensor_type': sensor_type,
+                            'type': display_name,
+                            'value': value,
+                            'unit': get_unit_for_sensor(display_name),
+                            'timestamp': row['timestamp'].strftime("%Y-%m-%dT%H:%M:%S") if not pd.isnull(row['timestamp']) else '',
+                            'anomaly': int(row.get('anomaly', 0)),
+                            'anomaly_type': 'UNKNOWN',
+                            'alert_message': '',
+                            'home_safety_alert': False,
+                            'confidence': 0.0,
+                            'trend': 'stable',
+                            'icon': get_icon_for_sensor(display_name)
+                        })
+                else:
+                    # For non-gas sensors, use basic detection
+                    display_name = next((k for k, v in FEATURE_MAP.items() if v == sensor_type), sensor_type)
+                    sensors.append({
+                        'id': f'sensor-{sensor_type}-{row.name}',
+                        'sensor_type': sensor_type,
+                        'type': display_name,
+                        'value': value,
+                        'unit': get_unit_for_sensor(display_name),
+                        'timestamp': row['timestamp'].strftime("%Y-%m-%dT%H:%M:%S") if not pd.isnull(row['timestamp']) else '',
+                        'anomaly': int(row.get('anomaly', 0)),
+                        'anomaly_type': 'NORMAL',
+                        'alert_message': '',
+                        'home_safety_alert': False,
+                        'confidence': 0.0,
+                        'trend': 'stable',
+                        'icon': get_icon_for_sensor(display_name)
+                    })
         
         return jsonify(sensors)
     except Exception as e:
@@ -135,6 +227,33 @@ def get_sensor_history(sensor_id):
                 'timestamp': row['timestamp'].strftime("%H:%M") if not pd.isnull(row['timestamp']) else '',
                 'value': float(row.get('value', 0)),
                 'isAnomaly': int(row.get('anomaly', 0))
+            })
+        
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# API endpoint for all historical data (for charts)
+@app.route('/api/sensors/history', methods=['GET'])
+def get_all_sensor_history():
+    try:
+        if not os.path.exists(CSV_FILE):
+            return jsonify([])
+        
+        df = pd.read_csv(CSV_FILE)
+        if 'anomaly' not in df.columns:
+            df['anomaly'] = 0
+
+        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+        df = df.sort_values('timestamp', ascending=True).tail(50)  # Increased from 100 to 50 for better performance
+        
+        history = []
+        for _, row in df.iterrows():
+            history.append({
+                'timestamp': row['timestamp'].strftime("%Y-%m-%d %H:%M:%S") if not pd.isnull(row['timestamp']) else '',
+                'sensor_type': row['sensor_type'],
+                'value': float(row.get('value', 0)),
+                'anomaly': int(row.get('anomaly', 0))
             })
         
         return jsonify(history)
